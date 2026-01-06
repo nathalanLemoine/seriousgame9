@@ -1,0 +1,239 @@
+openapi: 3.0.0
+info:
+  title: API HyperFresh Anti-Gaspi
+  description: API B2B2C pour la gestion des invendus HyperFresh et l'application étudiante.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Serveur de Développement
+
+tags:
+  - name: Auth
+    description: Authentification Étudiants & Magasins
+  - name: Paniers
+    description: Gestion du stock d'invendus
+  - name: Commandes
+    description: Processus d'achat et historique
+  - name: Gamification
+    description: Impact écologique et score
+
+paths:
+  # --- 1. AUTHENTIFICATION ---
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Connexion utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "etudiant@univ-orleans.fr"
+                password:
+                  type: string
+                  example: "secret123"
+      responses:
+        '200':
+          description: Connexion réussie (Retourne le Token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  role:
+                    type: string
+                    example: "student"
+
+  # --- 2. GESTION DES PANIERS ---
+  /paniers:
+    get:
+      tags: [Paniers]
+      summary: Rechercher des paniers (Filtres)
+      description: Liste les paniers avec filtres optionnels.
+      parameters:
+        - in: query
+          name: ville
+          schema:
+            type: string
+          description: Filtrer par ville (ex Olivet)
+        - in: query
+          name: max_price
+          schema:
+            type: number
+          description: Prix maximum
+      responses:
+        '200':
+          description: Liste des paniers trouvés
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Panier'
+    
+    post:
+      tags: [Paniers]
+      summary: Créer un panier (Magasin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PanierInput'
+      responses:
+        '201':
+          description: Panier ajouté au stock
+
+  /paniers/{id}:
+    get:
+      tags: [Paniers]
+      summary: Détail d'un panier spécifique
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID unique du panier
+      responses:
+        '200':
+          description: Détails complets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Panier'
+        '404':
+          description: Panier non trouvé
+
+  # --- 3. COMMANDES ---
+  /commandes:
+    post:
+      tags: [Commandes]
+      summary: Passer une commande
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                panier_id:
+                  type: integer
+                payment_method:
+                  type: string
+                  example: "cb_stripe"
+      responses:
+        '200':
+          description: Commande validée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order_id:
+                    type: string
+                  status:
+                    type: string
+                    example: "CONFIRMED"
+                  pickup_code:
+                    type: string
+                    example: "XJ-982"
+
+  /commandes/historique:
+    get:
+      tags: [Commandes]
+      summary: Historique des commandes de l'étudiant connecté
+      responses:
+        '200':
+          description: Liste des achats passés
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: date
+                      example: "2023-10-15"
+                    panier:
+                      type: string
+                      example: "Panier Légumes"
+                    prix:
+                      type: number
+                      example: 3.99
+
+  # --- 4. GAMIFICATION (RSE) ---
+  /users/impact:
+    get:
+      tags: [Gamification]
+      summary: Obtenir les stats écologiques de l'étudiant
+      responses:
+        '200':
+          description: Stats RSE (CO2 et Euros)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_economise_euros:
+                    type: number
+                    example: 124.50
+                  total_co2_sauve_kg:
+                    type: number
+                    example: 45.2
+                  niveau:
+                    type: string
+                    example: "Sauveur de Planète - Niveau 3"
+
+components:
+  schemas:
+    Panier:
+      type: object
+      properties:
+        id:
+          type: integer
+        titre:
+          type: string
+          example: "Panier Surprise Fruits & Légumes"
+        prix:
+          type: number
+          example: 3.99
+        valeur_reelle:
+          type: number
+          example: 12.00
+        magasin:
+          type: string
+          example: "HyperFresh Olivet"
+        image_url:
+          type: string
+        available_until:
+          type: string
+          format: date-time
+          example: "2023-12-31T20:00:00Z"
+
+    PanierInput:
+      type: object
+      required:
+        - titre
+        - prix
+      properties:
+        titre:
+          type: string
+          example: "Panier du soir"
+        prix:
+          type: number
+          example: 3.99
+        description:
+          type: string
+          example: "Contient des produits laitiers"
+        quantite:
+          type: integer
+          example: 5
