@@ -1,37 +1,70 @@
 openapi: 3.0.0
 info:
-  title: API HyperFresh (MySQL Version)
-  description: API stricte avec gestion des produits, paniers composés et commandes.
-  version: 2.0.0
+  title: API HyperFresh
+  description: API complète respectant les standards REST (GET, POST, PUT, DELETE) et les codes d'erreurs.
+  version: 3.0.0
 servers:
   - url: http://localhost:3000/api/v1
 
+# Sécurisation globale (JWT)
+security:
+  - bearerAuth: []
+
 tags:
+  - name: Auth
+    description: Authentification
   - name: Products
-    description: Gestion du stock produits (Magasin)
+    description: Gestion du stock
   - name: Paniers
-    description: Assemblage des paniers (Offres)
+    description: Gestion des offres commerciales
   - name: Orders
-    description: Commandes étudiants
+    description: Commandes et Retraits
 
 paths:
-  # --- PRODUITS ---
+  # --- 1. AUTHENTIFICATION ---
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: [] # Public endpoint
+      summary: Se connecter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthInput'
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Email ou mot de passe incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # --- 2. GESTION PRODUITS (CRUD) ---
   /products:
     get:
       tags: [Products]
-      summary: Lister tous les produits en stock (pour composer des paniers)
+      summary: Lister les produits
       responses:
         '200':
-          description: Liste des produits
+          description: Succès
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Product'
+    
     post:
       tags: [Products]
-      summary: Ajouter un produit au stock (Scan Code Barre)
+      summary: Créer un produit
       requestBody:
         required: true
         content:
@@ -41,15 +74,57 @@ paths:
       responses:
         '201':
           description: Produit créé
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
-  # --- PANIERS ---
+  /products/{id}:
+    put:
+      tags: [Products]
+      summary: Mettre à jour un produit
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          description: Produit mis à jour
+        '404':
+          description: Produit introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # --- 3. GESTION PANIERS (CRUD) ---
   /paniers:
     get:
       tags: [Paniers]
-      summary: Lister les paniers disponibles (Vue Étudiant)
+      summary: Rechercher des paniers (Filtres)
+      parameters:
+        - in: query
+          name: ville
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [disponible, reserve]
       responses:
         '200':
-          description: Liste des paniers avec leur contenu
+          description: Liste des paniers
           content:
             application/json:
               schema:
@@ -59,8 +134,7 @@ paths:
     
     post:
       tags: [Paniers]
-      summary: Créer un panier composé (Vue Magasin)
-      description: On crée un panier en donnant une liste d'IDs de produits existants.
+      summary: Mettre un panier en vente
       requestBody:
         required: true
         content:
@@ -69,12 +143,12 @@ paths:
               $ref: '#/components/schemas/PanierInput'
       responses:
         '201':
-          description: Panier mis en vente
+          description: Panier créé
 
   /paniers/{id}:
     get:
       tags: [Paniers]
-      summary: Détail complet d'un panier (avec liste des produits)
+      summary: Voir le détail d'un panier
       parameters:
         - in: path
           name: id
@@ -83,18 +157,34 @@ paths:
             type: integer
       responses:
         '200':
-          description: Panier et son contenu
+          description: Panier trouvé
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Panier'
+        '404':
+          description: Panier inexistant
 
-  # --- COMMANDES ---
+    delete:
+      tags: [Paniers]
+      summary: Supprimer un panier 
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Panier supprimé avec succès
+        '403':
+          description: Interdit 
+
+  # --- 4. COMMANDES ---
   /orders:
     post:
       tags: [Orders]
-      summary: Passer commande
-      description: L'étudiant réserve un panier via son ID.
+      summary: Créer une commande 
       requestBody:
         required: true
         content:
@@ -103,15 +193,84 @@ paths:
               $ref: '#/components/schemas/OrderInput'
       responses:
         '201':
-          description: Commande enregistrée
+          description: Commande validée
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Order'
+        '400':
+          description: Panier déjà vendu ou indisponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders/{id}/status:
+    put:
+      tags: [Orders]
+      summary: Mettre à jour le statut
+      description: Utilisé par le magasin quand l'étudiant vient chercher son panier.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [COLLECTED]
+      responses:
+        '200':
+          description: Statut mis à jour
+        '404':
+          description: Commande introuvable
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
-    # --- 1. PRODUIT (L'unité) ---
+    # --- OBJET ERREUR STANDARD ---
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 404
+        message:
+          type: string
+          example: "Ressource introuvable"
+
+    # --- INPUTS & OUTPUTS METIERS ---
+    AuthInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        role:
+          type: string
+
     Product:
       type: object
       properties:
@@ -119,29 +278,22 @@ components:
           type: integer
         name:
           type: string
-        expiration_date:
-          type: string
-          format: date
-        barcode:
-          type: string
         original_price:
           type: number
+        barcode:
+          type: string
 
-    ProductInput: # Ce qu'on envoie pour créer un produit
+    ProductInput:
       type: object
       required: [name, original_price]
       properties:
         name:
           type: string
-        expiration_date:
-          type: string
-          format: date
-        barcode:
-          type: string
         original_price:
           type: number
+        barcode:
+          type: string
 
-    # --- 2. PANIER (Le lot) ---
     Panier:
       type: object
       properties:
@@ -151,18 +303,15 @@ components:
           type: string
         price:
           type: number
-        store_name:
-          type: string
         status:
           type: string
           enum: [disponible, reserve, vendu]
-        # Ici on a la liste des VRAIS produits, pas juste des IDs
         items:
           type: array
           items:
-            type: integer
+            type: integer 
 
-    PanierInput: # Pour créer un panier, on envoie juste les IDs des produits
+    PanierInput:
       type: object
       required: [titre, price, product_ids]
       properties:
@@ -170,14 +319,11 @@ components:
           type: string
         price:
           type: number
-        store_name:
-          type: string
-        product_ids: # Tableau d'IDs (ex: [1, 4, 12])
+        product_ids:
           type: array
           items:
             type: integer
 
-    # --- 3. COMMANDE (L'achat) ---
     Order:
       type: object
       properties:
@@ -187,13 +333,12 @@ components:
           type: string
         pickup_code:
           type: string
-        # En réponse, on peut renvoyer l'objet panier complet pour affichage
         panier_id:
           type: integer
         user_id:
           type: integer
 
-    OrderInput: # Pour commander, on a besoin que de l'ID du panier
+    OrderInput:
       type: object
       required: [panier_id]
       properties:
