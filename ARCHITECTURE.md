@@ -30,7 +30,7 @@ end
 
 %% -- DATABASE --
 subgraph Data ["Données"]
-    SQLite[("SQLite<br>(Fichier local .db)")]:::db
+    MYSQL[("MYSQLe<br>(Fichier local .db)")]:::db
 end
 
 %% -- FLUX --
@@ -42,7 +42,7 @@ WebApp -->|Requêtes HTTP JSON| APIServer
 APIServer --- Logic1
 APIServer --- Logic2
 
-APIServer -->|Lecture/Écriture| SQLite
+APIServer -->|Lecture/Écriture| MYSQL
 
 %% -- SERVICES EXTERNES --
 Stripe[("Simulation Paiement")]:::ext
