@@ -1,57 +1,55 @@
 openapi: 3.0.0
 info:
-  title: API HyperFresh Anti-Gaspi
-  description: API complète incluant la gestion Utilisateurs, Commandes et Stocks.
-  version: 1.0.0
+  title: API HyperFresh (MySQL Version)
+  description: API stricte avec gestion des produits, paniers composés et commandes.
+  version: 2.0.0
 servers:
   - url: http://localhost:3000/api/v1
-    description: Serveur de Production
 
 tags:
-  - name: Auth
-    description: Connexion et Inscription
+  - name: Products
+    description: Gestion du stock produits (Magasin)
   - name: Paniers
-    description: Catalogue des invendus
-  - name: Commandes
-    description: Gestion des achats
+    description: Assemblage des paniers (Offres)
+  - name: Orders
+    description: Commandes étudiants
 
 paths:
-  # --- AUTHENTIFICATION ---
-  /auth/login:
+  # --- PRODUITS ---
+  /products:
+    get:
+      tags: [Products]
+      summary: Lister tous les produits en stock (pour composer des paniers)
+      responses:
+        '200':
+          description: Liste des produits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
     post:
-      tags: [Auth]
-      summary: Connexion utilisateur
+      tags: [Products]
+      summary: Ajouter un produit au stock (Scan Code Barre)
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthInput'
+              $ref: '#/components/schemas/ProductInput'
       responses:
-        '200':
-          description: Connexion réussie
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthResponse'
+        '201':
+          description: Produit créé
 
   # --- PANIERS ---
   /paniers:
     get:
       tags: [Paniers]
-      summary: Lister les paniers disponibles
-      parameters:
-        - in: query
-          name: ville
-          schema:
-            type: string
-        - in: query
-          name: max_price
-          schema:
-            type: number
+      summary: Lister les paniers disponibles (Vue Étudiant)
       responses:
         '200':
-          description: Liste récupérée
+          description: Liste des paniers avec leur contenu
           content:
             application/json:
               schema:
@@ -61,7 +59,8 @@ paths:
     
     post:
       tags: [Paniers]
-      summary: Ajouter un panier (Magasin)
+      summary: Créer un panier composé (Vue Magasin)
+      description: On crée un panier en donnant une liste d'IDs de produits existants.
       requestBody:
         required: true
         content:
@@ -70,16 +69,12 @@ paths:
               $ref: '#/components/schemas/PanierInput'
       responses:
         '201':
-          description: Panier créé
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Panier'
+          description: Panier mis en vente
 
   /paniers/{id}:
     get:
       tags: [Paniers]
-      summary: Détail d'un panier
+      summary: Détail complet d'un panier (avec liste des produits)
       parameters:
         - in: path
           name: id
@@ -88,82 +83,65 @@ paths:
             type: integer
       responses:
         '200':
-          description: Panier trouvé
+          description: Panier et son contenu
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Panier'
 
   # --- COMMANDES ---
-  /commandes:
+  /orders:
     post:
-      tags: [Commandes]
-      summary: Créer une nouvelle commande
+      tags: [Orders]
+      summary: Passer commande
+      description: L'étudiant réserve un panier via son ID.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CommandeInput'
+              $ref: '#/components/schemas/OrderInput'
       responses:
         '201':
-          description: Commande validée
+          description: Commande enregistrée
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Commande'
-
-  /commandes/historique:
-    get:
-      tags: [Commandes]
-      summary: Mes commandes passées
-      responses:
-        '200':
-          description: Historique utilisateur
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Commande'
-
-  # --- UTILISATEUR & IMPACT ---
-  /users/me:
-    get:
-      tags: [Auth]
-      summary: Profil de l'utilisateur connecté (et stats RSE)
-      responses:
-        '200':
-          description: Profil complet
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/Order'
 
 components:
   schemas:
-    # --- MODELE 1 : UTILISATEUR ---
-    User:
+    # --- 1. PRODUIT (L'unité) ---
+    Product:
       type: object
       properties:
         id:
           type: integer
-        email:
+        name:
           type: string
-          format: email
-        password:
+        expiration_date:
           type: string
-        role:
+          format: date
+        barcode:
           type: string
-          enum: [student, store_manager, admin]
-        impact_co2:
+        original_price:
           type: number
-          description: Total CO2 économisé en kg
-        impact_euros:
-          type: number
-          description: Total euros économisés
 
-    # --- MODELE 2 : PANIER ---
+    ProductInput: # Ce qu'on envoie pour créer un produit
+      type: object
+      required: [name, original_price]
+      properties:
+        name:
+          type: string
+        expiration_date:
+          type: string
+          format: date
+        barcode:
+          type: string
+        original_price:
+          type: number
+
+    # --- 2. PANIER (Le lot) ---
     Panier:
       type: object
       properties:
@@ -171,78 +149,53 @@ components:
           type: integer
         titre:
           type: string
-        description:
-          type: string
-        prix:
+        price:
           type: number
-        valeur_reelle:
-          type: number
-        magasin_nom:
+        store_name:
           type: string
-        statut:
-          type: string
-          enum: [disponible, reserve, vendu]
-        image_url:
-          type: string
-
-    # --- MODELE 3 : COMMANDE ---
-    Commande:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        date_creation:
-          type: string
-          format: date-time
         status:
           type: string
-          enum: [PENDING, PAID, COLLECTED]
-        code_retrait:
-          type: string
-          description: Code à montrer au magasin
-        panier:
-          $ref: '#/components/schemas/Panier'
-        user_id:
-          type: integer
+          enum: [disponible, reserve, vendu]
+        # Ici on a la liste des VRAIS produits, pas juste des IDs
+        items:
+          type: array
+          items:
+            type: integer
 
-    # --- INPUTS ---
-    AuthInput:
+    PanierInput: # Pour créer un panier, on envoie juste les IDs des produits
       type: object
-      required: [email, password]
-      properties:
-        email:
-          type: string
-        password:
-          type: string
-          format: password
-
-    AuthResponse:
-      type: object
-      properties:
-        token:
-          type: string
-        expiresIn:
-          type: integer
-
-    PanierInput:
-      type: object
-      required: [titre, prix, magasin_id]
+      required: [titre, price, product_ids]
       properties:
         titre:
           type: string
-        prix:
+        price:
           type: number
-        magasin_id:
-          type: integer
-        description:
+        store_name:
           type: string
+        product_ids: # Tableau d'IDs (ex: [1, 4, 12])
+          type: array
+          items:
+            type: integer
 
-    CommandeInput:
+    # --- 3. COMMANDE (L'achat) ---
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+        pickup_code:
+          type: string
+        # En réponse, on peut renvoyer l'objet panier complet pour affichage
+        panier_id:
+          type: integer
+        user_id:
+          type: integer
+
+    OrderInput: # Pour commander, on a besoin que de l'ID du panier
       type: object
       required: [panier_id]
       properties:
         panier_id:
           type: integer
-        payment_token:
-          type: string
