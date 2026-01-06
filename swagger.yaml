@@ -1,24 +1,22 @@
 openapi: 3.0.0
 info:
   title: API HyperFresh Anti-Gaspi
-  description: API B2B2C pour la gestion des invendus HyperFresh et l'application étudiante.
+  description: API complète incluant la gestion Utilisateurs, Commandes et Stocks.
   version: 1.0.0
 servers:
   - url: http://localhost:3000/api/v1
-    description: Serveur de Développement
+    description: Serveur de Production
 
 tags:
   - name: Auth
-    description: Authentification Étudiants & Magasins
+    description: Connexion et Inscription
   - name: Paniers
-    description: Gestion du stock d'invendus
+    description: Catalogue des invendus
   - name: Commandes
-    description: Processus d'achat et historique
-  - name: Gamification
-    description: Impact écologique et score
+    description: Gestion des achats
 
 paths:
-  # --- 1. AUTHENTIFICATION ---
+  # --- AUTHENTIFICATION ---
   /auth/login:
     post:
       tags: [Auth]
@@ -28,48 +26,32 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                email:
-                  type: string
-                  example: "etudiant@univ-orleans.fr"
-                password:
-                  type: string
-                  example: "secret123"
+              $ref: '#/components/schemas/AuthInput'
       responses:
         '200':
-          description: Connexion réussie (Retourne le Token)
+          description: Connexion réussie
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  token:
-                    type: string
-                  role:
-                    type: string
-                    example: "student"
+                $ref: '#/components/schemas/AuthResponse'
 
-  # --- 2. GESTION DES PANIERS ---
+  # --- PANIERS ---
   /paniers:
     get:
       tags: [Paniers]
-      summary: Rechercher des paniers (Filtres)
-      description: Liste les paniers avec filtres optionnels.
+      summary: Lister les paniers disponibles
       parameters:
         - in: query
           name: ville
           schema:
             type: string
-          description: Filtrer par ville (ex Olivet)
         - in: query
           name: max_price
           schema:
             type: number
-          description: Prix maximum
       responses:
         '200':
-          description: Liste des paniers trouvés
+          description: Liste récupérée
           content:
             application/json:
               schema:
@@ -79,7 +61,7 @@ paths:
     
     post:
       tags: [Paniers]
-      summary: Créer un panier (Magasin)
+      summary: Ajouter un panier (Magasin)
       requestBody:
         required: true
         content:
@@ -88,113 +70,98 @@ paths:
               $ref: '#/components/schemas/PanierInput'
       responses:
         '201':
-          description: Panier ajouté au stock
+          description: Panier créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Panier'
 
   /paniers/{id}:
     get:
       tags: [Paniers]
-      summary: Détail d'un panier spécifique
+      summary: Détail d'un panier
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: integer
-          description: ID unique du panier
       responses:
         '200':
-          description: Détails complets
+          description: Panier trouvé
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Panier'
-        '404':
-          description: Panier non trouvé
 
-  # --- 3. COMMANDES ---
+  # --- COMMANDES ---
   /commandes:
     post:
       tags: [Commandes]
-      summary: Passer une commande
+      summary: Créer une nouvelle commande
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                panier_id:
-                  type: integer
-                payment_method:
-                  type: string
-                  example: "cb_stripe"
+              $ref: '#/components/schemas/CommandeInput'
       responses:
-        '200':
+        '201':
           description: Commande validée
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  order_id:
-                    type: string
-                  status:
-                    type: string
-                    example: "CONFIRMED"
-                  pickup_code:
-                    type: string
-                    example: "XJ-982"
+                $ref: '#/components/schemas/Commande'
 
   /commandes/historique:
     get:
       tags: [Commandes]
-      summary: Historique des commandes de l'étudiant connecté
+      summary: Mes commandes passées
       responses:
         '200':
-          description: Liste des achats passés
+          description: Historique utilisateur
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    date:
-                      type: string
-                      format: date
-                      example: "2023-10-15"
-                    panier:
-                      type: string
-                      example: "Panier Légumes"
-                    prix:
-                      type: number
-                      example: 3.99
+                  $ref: '#/components/schemas/Commande'
 
-  # --- 4. GAMIFICATION (RSE) ---
-  /users/impact:
+  # --- UTILISATEUR & IMPACT ---
+  /users/me:
     get:
-      tags: [Gamification]
-      summary: Obtenir les stats écologiques de l'étudiant
+      tags: [Auth]
+      summary: Profil de l'utilisateur connecté (et stats RSE)
       responses:
         '200':
-          description: Stats RSE (CO2 et Euros)
+          description: Profil complet
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  total_economise_euros:
-                    type: number
-                    example: 124.50
-                  total_co2_sauve_kg:
-                    type: number
-                    example: 45.2
-                  niveau:
-                    type: string
-                    example: "Sauveur de Planète - Niveau 3"
+                $ref: '#/components/schemas/User'
 
 components:
   schemas:
+    # --- MODELE 1 : UTILISATEUR ---
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [student, store_manager, admin]
+        impact_co2:
+          type: number
+          description: Total CO2 économisé en kg
+        impact_euros:
+          type: number
+          description: Total euros économisés
+
+    # --- MODELE 2 : PANIER ---
     Panier:
       type: object
       properties:
@@ -202,38 +169,78 @@ components:
           type: integer
         titre:
           type: string
-          example: "Panier Surprise Fruits & Légumes"
+        description:
+          type: string
         prix:
           type: number
-          example: 3.99
         valeur_reelle:
           type: number
-          example: 12.00
-        magasin:
+        magasin_nom:
           type: string
-          example: "HyperFresh Olivet"
+        statut:
+          type: string
+          enum: [disponible, reserve, vendu]
         image_url:
           type: string
-        available_until:
+
+    # --- MODELE 3 : COMMANDE ---
+    Commande:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        date_creation:
           type: string
           format: date-time
-          example: "2023-12-31T20:00:00Z"
+        status:
+          type: string
+          enum: [PENDING, PAID, COLLECTED]
+        code_retrait:
+          type: string
+          description: Code à montrer au magasin
+        panier:
+          $ref: '#/components/schemas/Panier'
+        user_id:
+          type: integer
+
+    # --- INPUTS ---
+    AuthInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+          format: password
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        expiresIn:
+          type: integer
 
     PanierInput:
       type: object
-      required:
-        - titre
-        - prix
+      required: [titre, prix, magasin_id]
       properties:
         titre:
           type: string
-          example: "Panier du soir"
         prix:
           type: number
-          example: 3.99
+        magasin_id:
+          type: integer
         description:
           type: string
-          example: "Contient des produits laitiers"
-        quantite:
+
+    CommandeInput:
+      type: object
+      required: [panier_id]
+      properties:
+        panier_id:
           type: integer
-          example: 5
+        payment_token:
+          type: string
