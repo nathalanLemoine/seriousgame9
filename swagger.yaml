@@ -151,6 +151,8 @@ components:
         email:
           type: string
           format: email
+        password:
+          type: string
         role:
           type: string
           enum: [student, store_manager, admin]
