@@ -30,7 +30,7 @@ end
 
 %% -- DATABASE --
 subgraph Data ["Données"]
-    MYSQL[("MYSQL<br>(Fichier local .db)")]:::db
+    MYSQL[("MYSQL")]:::db
 end
 
 %% -- FLUX --
