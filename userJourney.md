@@ -1,23 +1,34 @@
-# User Journey Map : L'expérience Étudiant
+# User Journey Map : L'Expérience Étudiante
 
-Ce graphique illustre le parcours émotionnel de Léo, un étudiant fauché, qui utilise HyperFresh pour la première fois.
+Ce graphique illustre le parcours émotionnel complet de Léo, étudiant boursier, lors de sa première utilisation d'HyperFresh.
 
 ```mermaid
 journey
-    title Parcours de Léo : De la Faim au Festin Éco-responsable
+    title Parcours de Léo : De la Faim au "Mieux Manger"
     
-    section 1. LE DÉCLENCHEUR (La Galère)
-      😫 Frigo vide & Budget serré: 1: Léo
-      🤔 Cherche une solution: 2: Léo
-    
-    section 2. LA DÉCOUVERTE (L'Espoir)
-      🔔 Notif "Panier à 3.99€": 4: Léo, App
-      📲 Réserve & Paie (Sécurisé): 5: Léo, App
-    
-    section 3. LE RETRAIT (L'Effort)
-      🚶 Marche vers le magasin: 3: Léo
-      🏪 Scan QR Code (Rapide): 4: Léo, Vendeur
-    
-    section 4. LA RÉCOMPENSE (L'Effet Wow)
-      🛍️ Découverte du contenu (Lourd !): 5: Léo
-      🏆 Notif "Bravo -2kg CO2": 5: Léo, App
+    %% --- PHASE 1 : LE BESOIN (Douleur) ---
+    section 1. PRISE DE CONSCIENCE
+      😨 Ouvre le frigo (Vide): 1: Léo
+      💸 Check compte bancaire (Reste 12€): 1: Léo, App Banque
+      🤔 Hésitation (Pâtes ou Kebab ?): 2: Léo
+
+    %% --- PHASE 2 : LA SOLUTION (Découverte) ---
+    section 2. RECHERCHE & ACHAT
+      🔔 Notif Push "Paniers dispo à 300m": 3: App, Léo
+      📱 Ouvre l'App & voit la Carte: 4: App, Léo
+      🥗 Trouve "Panier Surprise" à 3.99€: 5: Léo
+      💳 Paiement 1-Click (Rapide): 5: App, Stripe
+
+    %% --- PHASE 3 : L'ACTION PHYSIQUE (Effort) ---
+    section 3. LE RETRAIT MAGASIN
+      🚶 Trajet vers le supermarché (Effort): 3: Léo
+      👀 Cherche le point de retrait: 3: Léo, Magasin
+      🤝 Scanne QR Code avec Vendeur: 4: Léo, Vendeur
+      🛍️ Récupère le sac (Lourd = Rentable): 5: Léo
+
+    %% --- PHASE 4 : CONSOMMATION & FIDÉLISATION (Satisfaction) ---
+    section 4. L'EXPÉRIENCE FINALE
+      🏠 Retour & Déballage (Unboxing): 5: Léo
+      😋 Préparation du repas: 5: Léo
+      🏆 Notif "Bravo ! -2kg de CO2 sauvés": 5: App, Léo
+      🔄 Décide de s'abonner au Premium: 5: Léo
